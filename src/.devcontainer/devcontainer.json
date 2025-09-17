@@ -1,0 +1,19 @@
+{
+  "name": "Backend Autochef",
+  "dockerContainer": "backendautochef",
+  "workspaceFolder": "/var/www",
+  "remoteUser": "root",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash",
+    "php.validate.executablePath": "/usr/local/bin/php"
+  },
+  "extensions": [
+    "bmewburn.vscode-intelephense-client",
+    "amiralizadeh9480.laravel-extra-intellisense",
+    "onecentlin.laravel-blade",
+    "ms-azuretools.vscode-docker"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/var/www,type=bind,consistency=cached"
+  ]
+}

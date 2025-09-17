@@ -1,0 +1,50 @@
+services:
+  nginxautochef:
+    image: nginx:alpine
+    container_name: nginxautochef
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - autochefnetwork
+    depends_on:
+      - backendautochef
+
+  backendautochef:
+    build: .
+    image: autochef-app:latest
+    container_name: backendautochef
+    volumes:
+      - ./src:/var/www
+    networks:
+      - autochefnetwork
+    depends_on:
+      - dbautochef
+      - redisautochef
+
+  dbautochef:
+    image: postgres:latest
+    container_name: autochefdbcon
+    environment:
+      POSTGRES_USER: autochef
+      POSTGRES_PASSWORD: autochef123.
+      POSTGRES_DB: autochefdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - autochefnetwork
+
+  redisautochef:
+    image: redis:latest
+    container_name: redisautochef
+    networks:
+      - autochefnetwork
+
+networks:
+  autochefnetwork:
+    driver: bridge
+
+volumes:
+  db_data:
