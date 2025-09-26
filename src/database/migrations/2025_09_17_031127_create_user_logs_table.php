@@ -1,5 +1,4 @@
 <?php
-// database/migrations/2025_09_17_200800_create_user_logs_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

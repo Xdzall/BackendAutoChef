@@ -1,5 +1,4 @@
 <?php
-// database/migrations/2025_09_17_100000_create_users_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,8 +12,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password'); // Menggunakan 'password' sesuai konvensi Laravel
-            $table->timestamps(); // Ini akan membuat created_at dan updated_at
+            $table->string('password');
+            $table->timestamps();
         });
     }
 
