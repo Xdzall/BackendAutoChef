@@ -17,17 +17,8 @@ class Ingredients extends Model
         'name_ingredients',
     ];
 
-    /**
-     * Karena tabel 'ingredients' di skema Anda tidak memiliki kolom
-     * created_at dan updated_at, kita perlu menonaktifkannya
-     * agar tidak terjadi error saat menyimpan data.
-     */
     public $timestamps = false;
 
-    /**
-     * Mendefinisikan relasi "satu ingredients bisa dimiliki oleh banyak Resep".
-     * Ini adalah relasi kebalikan dari yang ada di model Resep.
-     */
     public function recipe(): BelongsToMany
     {
         return $this->belongsToMany(Recipe::class, 'ingredients_details')
