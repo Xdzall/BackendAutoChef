@@ -24,6 +24,8 @@ class ContohResepSeeder extends Seeder
             }
 
             $path = Storage::disk('s3')->putFile('recipe-images', new File($filePath), 'public');
+            $url = Storage::disk('s3')->url($path);
+
             
             if (!$path) {
                 $this->command->error('Gagal meng-upload file ke MinIO.');
