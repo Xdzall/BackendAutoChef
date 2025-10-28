@@ -17,6 +17,7 @@ services:
     image: autochef-app:latest
     container_name: backendautochef
     volumes:
+      - /var/www/vendor
       - ./src:/var/www
     networks:
       - autochefnetwork
@@ -48,9 +49,10 @@ services:
       - autochefnetwork
     entrypoint: >
       /bin/sh -c "
-      until (/usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin) do sleep 1; done;
+      until (/usr/bin/mc alias set myminio http://minio:9000 autochef123. autochef123.) do sleep 1; done;
       /usr/bin/mc mb myminio/autochef-recipe-images;
-      /usr/bin/mc anonymous set download myminio/autochef-recipe-images;"
+      /usr/bin/mc anonymous set public myminio/autochef-recipe-images;
+      exit 0;"
 
   dbautochef:
     image: postgres:latest
