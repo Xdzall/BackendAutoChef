@@ -55,7 +55,7 @@ services:
       exit 0;"
 
   dbautochef:
-    image: postgres:latest
+    image: postgres:17
     container_name: autochefdbcon
     environment:
       POSTGRES_USER: autochef
