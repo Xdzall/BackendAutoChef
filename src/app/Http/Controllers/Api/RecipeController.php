@@ -13,13 +13,35 @@ class RecipeController extends Controller
     /**
      * Menampilkan daftar semua resep.
      */
-    public function index()
+    public function index(Request $request) // <-- Tambahkan (Request $request)
     {
-        // Ambil semua resep, gunakan pagination untuk performa
-        $recipes = Recipe::paginate(10);
+        // Mulai query builder
+        $query = Recipe::query();
+
+        // Cek apakah ada parameter 'search' di request
+        if ($request->has('search')) {
+            $searchTerm = $request->input('search');
+            
+            // Tambahkan kondisi WHERE LIKE untuk mencari resep
+            // Ini akan mencari resep yang namanya mengandung searchTerm
+            $query->whereRaw('LOWER(name_recipe) LIKE ?', ['%' . strtolower($searchTerm) . '%']);
+        }
+
+        // Ambil resep dengan pagination dari query yang sudah difilter
+        $recipes = $query->paginate(10);
         
         // Bungkus hasilnya dengan RecipeResource
         return RecipeResource::collection($recipes);
+    }
+
+    public function recommendations()
+    {
+        // Ambil 9 resep secara acak dari database
+        $randomRecipes = Recipe::inRandomOrder()->limit(9)->get();
+
+        // Kembalikan menggunakan Resource yang sama agar format JSON konsisten
+        // Kita tidak perlu ->items() agar frontend tahu ini bukan paginasi
+        return RecipeResource::collection($randomRecipes);
     }
 
     /**

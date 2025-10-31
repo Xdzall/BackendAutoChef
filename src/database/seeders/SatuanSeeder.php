@@ -22,6 +22,12 @@ class SatuanSeeder extends Seeder
     ['name_unit' => 'Siung', 'abbreviation' => 'siung', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
     ['name_unit' => 'Batang', 'abbreviation' => 'batang', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
     ['name_unit' => 'Butir', 'abbreviation' => 'butir', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
+    ['name_unit' => 'Ruas Jari', 'abbreviation' => 'ruas jari', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
+    ['name_unit' => 'Ekor', 'abbreviation' => 'ekor', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
+    ['name_unit' => 'Secukupnya', 'abbreviation' => 'secukupnya', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
+    ['name_unit' => 'Ikat', 'abbreviation' => 'ikat', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
+    ['name_unit' => 'Sentimeter', 'abbreviation' => 'cm', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
+    ['name_unit' => 'Lembar', 'abbreviation' => 'lembar', 'type_unit' => 'quantity', 'conversion_to_grams' => null],
 ]);
 
     }
