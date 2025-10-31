@@ -23,7 +23,7 @@ class IngredientResource extends JsonResource
             // 'pivot' adalah objek spesial yang berisi data dari tabel pivot
             // ('ingredients_details') saat relasi many-to-many dimuat.
             // Kita menggunakan whenPivotLoaded untuk memastikan tidak ada error jika pivot tidak di-load.
-            'detail_penggunaan' => $this->whenPivotLoaded('ingredients_details', function () {
+            'detail_bahan' => $this->whenPivotLoaded('ingredients_details', function () {
                 return [
                     'jumlah' => $this->pivot->amount,
                     'satuan' => Unit::find($this->pivot->unit_id)?->abbreviation ?? 'N/A',

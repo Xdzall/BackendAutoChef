@@ -11,6 +11,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Rute yang bisa diakses oleh SEMUA PENGGUNA TERAUTENTIKASI
     // (karena admin juga memiliki izin 'view recipes')
     Route::get('/recipes', [RecipeController::class, 'index'])->middleware('permission:view recipes');
+    Route::get('/recipes/recommendations', [RecipeController::class, 'recommendations'])->middleware('permission:view recipes');
     Route::get('/recipes/{recipe}', [RecipeController::class, 'show'])->middleware('permission:view recipes');
     
     // Rute yang HANYA BISA DIAKSES OLEH ADMIN

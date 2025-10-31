@@ -16,10 +16,10 @@ class RecipeResource extends JsonResource
             'waktu_masak' => $this->cooking_time_minutes,
             // 'dibuat' => $this->created_at->diffForHumans(),
             'kategori' => $this->category_id,
-            'negara' => $this->country_id,
+            'negara' => $this->country ? $this->country->name_country : null,
 
             // Sertakan relasi hanya jika sudah dimuat (di-load)
-            'bahan_bahan' => IngredientResource::collection($this->whenLoaded('ingredients')),
+            'bahan' => IngredientResource::collection($this->whenLoaded('ingredients')),
             'langkah_langkah' => StepResource::collection($this->whenLoaded('steps')),
         ];
     }
