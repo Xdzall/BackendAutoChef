@@ -15,6 +15,8 @@ class ContohResepSeeder extends Seeder
 {
     public function run(): void
     {
+        DB::table('recipe')->truncate();
+
         DB::transaction(function () {
 
             $recipes = [
