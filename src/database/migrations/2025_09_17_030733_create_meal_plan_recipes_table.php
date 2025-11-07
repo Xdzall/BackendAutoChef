@@ -11,7 +11,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('meal_plan_id')->constrained('meal_plans')->onDelete('cascade');
             $table->foreignId('recipe_id')->constrained('recipe')->onDelete('cascade');
+            $table->unsignedInteger('quantity')->default(1)->after('recipe_id');
             $table->unique(['meal_plan_id', 'recipe_id']);
+            $table->timestamps();
         });
     }
 
