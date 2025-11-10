@@ -28,7 +28,7 @@ class RecipeController extends Controller
         }
 
         // Ambil resep dengan pagination dari query yang sudah difilter
-        $recipes = $query->paginate(10);
+        $recipes = $query->paginate(100);
         
         // Bungkus hasilnya dengan RecipeResource
         return RecipeResource::collection($recipes);

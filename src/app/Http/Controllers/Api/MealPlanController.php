@@ -50,28 +50,23 @@ class MealPlanController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-    'day' => 'required|string',
-    'recipes' => 'required|array',
-    'recipes.*.recipe_id' => 'required|exists:recipe,id',
-    'recipes.*.quantity' => 'nullable|integer|min:1',
-]);
+            'day' => 'required|string',
+            'recipes' => 'required|array',
+            'recipes.*.recipe_id' => 'required|exists:recipe,id',
+            'recipes.*.quantity' => 'nullable|integer|min:1',
+        ]);
 
-        // Ambil nama hari dari frontend
         $day = strtolower(trim($validated['day']));
 
-        // Cari meal plan berdasarkan user + plan_name (hari)
-        $mealPlan = MealPlan::where('user_id', $user->id)
-            ->where('plan_name', $day)
-            ->first();
-
-        // Jika belum ada, buat baru
-        if (!$mealPlan) {
-            $mealPlan = MealPlan::create([
+        $mealPlan = MealPlan::firstOrCreate(
+            [
                 'user_id' => $user->id,
                 'plan_name' => $day,
+            ],
+            [
                 'description' => 'Rencana makan untuk hari ' . ucfirst($day),
-            ]);
-        }
+            ]
+        );
 
         foreach ($validated['recipes'] as $r) {
             MealPlanRecipe::updateOrCreate(
@@ -80,16 +75,18 @@ class MealPlanController extends Controller
                     'recipe_id' => $r['recipe_id'],
                 ],
                 [
-                    'quantity' => $r['quantity'] ?? 1, // default 1 porsi
+                    'quantity' => $r['quantity'] ?? 1,
                 ]
             );
         }
 
+        $statusCode = $mealPlan->wasRecentlyCreated ? 201 : 200;
+
         return response()->json([
-            'message' => 'Meal plan saved successfully',
-            'meal_plan' => $mealPlan->load('recipes.recipe'),
-        ]);
+            'message' => 'Meal plan saved successfully'
+        ], $statusCode);
     }
+
 
 
 
@@ -146,7 +143,7 @@ class MealPlanController extends Controller
                     'satuan' => $first->pivot->unit_id
                         ? \App\Models\Unit::find($first->pivot->unit_id)?->abbreviation ?? 'N/A'
                         : 'N/A',
-                    'catatan' => $first->pivot->notes,
+                    // 'catatan' => $first->pivot->notes,
                 ],
             ];
         })->values();
