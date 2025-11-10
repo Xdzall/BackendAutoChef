@@ -15,7 +15,6 @@ class IngredientResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // 'this' merujuk pada satu instance dari model Ingredient
         return [
             'id_bahan' => $this->id,
             'nama_bahan' => $this->name_ingredients,

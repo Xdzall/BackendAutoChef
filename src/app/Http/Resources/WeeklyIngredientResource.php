@@ -15,7 +15,7 @@ class WeeklyIngredientResource extends JsonResource
             'detail_bahan' => [
                 'jumlah' => $this['detail_bahan']['jumlah'],
                 'satuan' => $this['detail_bahan']['satuan'],
-                'catatan' => $this['detail_bahan']['catatan'],
+                // 'catatan' => $this['detail_bahan']['catatan'],
             ]
         ];
     }
