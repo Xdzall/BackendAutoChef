@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\MealPlanController;
+use App\Http\Controllers\Api\FavoriteController;
+
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
@@ -17,6 +19,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::put('/recipes/{recipe}', [RecipeController::class, 'update'])->middleware('role:admin');
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update'])->middleware('role:admin');
     Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy'])->middleware('role:admin');
+});
+
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/recipes/{recipe}/favorites', [FavoriteController::class, 'toggleFavorite']);
 });
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
