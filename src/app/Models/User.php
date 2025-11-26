@@ -48,7 +48,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function favorites(): BelongsToMany
     {
         // Parameter: Model Terkait, Nama Tabel Pivot, Foreign Key di Pivot (User), Related Key di Pivot (Recipe)
-        return $this->belongsToMany(Recipe::class, 'recipe_favorites', 'user_id', 'recipe_id')
-                    ->withTimestamps(); // Agar kolom created_at terisi otomatis
+        return $this->belongsToMany(Recipe::class, 'recipe_favorites', 'user_id', 'recipe_id');
+                    // ->withTimestamps();
     }
 }
