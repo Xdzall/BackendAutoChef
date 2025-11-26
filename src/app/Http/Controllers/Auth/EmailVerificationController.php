@@ -6,28 +6,23 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 
-
 class EmailVerificationController extends Controller
 {
-    public function verify(Request $request)
+    public function verify(Request $request, $id, $hash)
     {
+        // Cek apakah link valid
         if (! $request->hasValidSignature()) {
-            return response()->json(['message' => 'Invalid or expired link'], 400);
+            return response()->json(['message' => 'Invalid or expired verification link'], 403);
         }
 
-        $user = User::findOrFail($request->route('id'));
+        $user = User::findOrFail($id);
 
         if (! $user->hasVerifiedEmail()) {
             $user->markEmailAsVerified();
         }
 
-        // Jika mode production, arahkan ke halaman web /openapp
-        if (app()->environment('production')) {
-            return redirect()->away(env('FRONTEND_URL') . '/openapp');
-        }
-
-        // Jika mode local/dev, arahkan langsung ke deep link Flutter
-        return redirect()->away('autochef://email/verify?id=' . $user->id);
+        // ✅ Arahkan ke halaman HTML yang akan handle deep link / Play Store
+        return redirect()->away(env('APP_URL') . '/openapp.html?verified=true');
     }
 }
 

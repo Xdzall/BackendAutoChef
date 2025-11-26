@@ -15,7 +15,7 @@ class VerifyEmail extends VerifyEmailBase
         // Ganti domain ke domain aplikasi atau deep link
         return str_replace(
             config('app.url'),
-            env('FRONTEND_URL', 'https://unitemized-giovanna-centrally.ngrok-free.dev'),
+            env('FRONTEND_URL', 'https://autochef.site'),
             $verifyUrl
         );
     }
