@@ -11,7 +11,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('recipe_id')->constrained('recipe')->onDelete('cascade');
             $table->primary(['user_id', 'recipe_id']);
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
         });
     }
 

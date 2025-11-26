@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -39,11 +40,15 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @return array<string, string>
      */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+
+    public function favorites(): BelongsToMany
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        // Parameter: Model Terkait, Nama Tabel Pivot, Foreign Key di Pivot (User), Related Key di Pivot (Recipe)
+        return $this->belongsToMany(Recipe::class, 'recipe_favorites', 'user_id', 'recipe_id')
+                    ->withTimestamps(); // Agar kolom created_at terisi otomatis
     }
 }
