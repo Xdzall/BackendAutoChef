@@ -14,7 +14,6 @@ class StepResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // 'this' merujuk pada satu instance dari model Step
         return [
             'urutan' => $this->step_number,
             'instruksi' => $this->instruction,
