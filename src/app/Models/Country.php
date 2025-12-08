@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Country extends Model
 {
-    protected $table = 'country'; // penting karena nama tabel bukan 'countries'
+    protected $table = 'country';
     protected $fillable = ['name_country'];
-    public $timestamps = false; // tidak ada created_at / updated_at pada migration
+    public $timestamps = false;
 }

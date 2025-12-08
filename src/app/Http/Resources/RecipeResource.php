@@ -20,7 +20,6 @@ class RecipeResource extends JsonResource
             'kategori' => $this->category_id,
             'negara' => $this->country ? $this->country->name_country : null,
 
-            // Sertakan relasi hanya jika sudah dimuat (di-load)
             'bahan' => IngredientResource::collection($this->whenLoaded('ingredients')),
             'langkah_langkah' => StepResource::collection($this->whenLoaded('steps')),
             'is_favorited' => $user ? $this->favorites()->where('user_id', $user->id)->exists() : false,

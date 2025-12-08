@@ -29,7 +29,6 @@ class MealPlanController extends Controller
 
             foreach ($planList as $plan) {
                 foreach ($plan->recipes as $mealRecipe) {
-                    // ✅ Bungkus resep dengan RecipeResource
                     $recipes[] = new RecipeResource($mealRecipe->recipe);
                 }
             }
@@ -94,12 +93,10 @@ class MealPlanController extends Controller
     {
         $user = Auth::user();
 
-        // Cari meal plan berdasarkan plan_name (hari)
         $mealPlan = MealPlan::where('user_id', $user->id)
             ->where('plan_name', strtolower($day))
             ->firstOrFail();
 
-        // Hapus resep dari meal plan (jika ada)
         $deleted = $mealPlan->recipes()->where('recipe_id', $recipeId)->delete();
 
         if ($deleted) {
