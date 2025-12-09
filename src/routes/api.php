@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\MealPlanController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\ProfileController;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
@@ -32,6 +33,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::delete('/meal-plans/{day}/{recipeId}', [MealPlanController::class, 'destroy']);
     Route::get('/meal-plans/weekly/ingredients', [MealPlanController::class, 'weeklyIngredients']);
     Route::get('/meal-plans/{day}/ingredients', [MealPlanController::class, 'ingredients']);
+});
+
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
 });
 
 require __DIR__.'/auth.php';
