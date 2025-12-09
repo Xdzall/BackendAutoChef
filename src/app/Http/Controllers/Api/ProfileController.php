@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
@@ -39,5 +40,29 @@ class ProfileController extends Controller
     public function show(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    public function uploadPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'max:2048'],
+        ]);
+        $user = $request->user();
+
+        if ($request->hasFile('photo')) {
+
+            if ($user->profile_photo_path) {
+                Storage::disk('s3')->delete($user->profile_photo_path);
+            }
+
+            $path = $request->file('photo')->store('profile-photos', 's3');
+            $user->profile_photo_path = $path;
+            $user->save();
+        }
+
+        return response()->json([
+            'message' => 'Foto profil berhasil diperbarui.',
+            'profile_photo_url' => $user->profile_photo_url
+        ]);
     }
 }
