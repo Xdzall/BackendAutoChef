@@ -111,39 +111,53 @@ class MealPlanController extends Controller
     {
         $user = Auth::user();
 
-        $mealPlans = MealPlan::with('recipes.recipe.ingredients')
+        $mealPlans = MealPlan::with('recipes.recipe.ingredients') // Eager load unit sekalian biar cepat
             ->where('user_id', $user->id)
             ->get();
 
-        $ingredients = collect();
+        $summary = [];
 
         foreach ($mealPlans as $mealPlan) {
             foreach ($mealPlan->recipes as $mealRecipe) {
                 $multiplier = $mealRecipe->quantity ?? 1;
 
                 foreach ($mealRecipe->recipe->ingredients as $ingredient) {
-                    $ingredient->pivot->amount = ($ingredient->pivot->amount ?? 0) * $multiplier;
-                    $ingredients->push($ingredient);
+                    $id = $ingredient->id;
+                    
+                    // Ambil nilai asli, jangan diubah
+                    $originalAmount = $ingredient->pivot->amount ?? 0;
+                    $calculatedAmount = $originalAmount * $multiplier;
+
+                    // Jika bahan belum ada di summary, inisialisasi
+                    if (!isset($summary[$id])) {
+                        $summary[$id] = [
+                            'ingredient' => $ingredient, // Simpan referensi objek untuk ambil nama/satuan nanti
+                            'total_amount' => 0
+                        ];
+                    }
+
+                    // Akumulasi jumlahnya
+                    $summary[$id]['total_amount'] += $calculatedAmount;
                 }
             }
         }
 
-        $grouped = $ingredients->groupBy('id')->map(function ($items) {
-            $first = $items->first();
-            $totalAmount = $items->sum(fn($item) => $item->pivot->amount ?? 0);
-
+        // Ubah format array menjadi Collection agar bisa masuk ke Resource
+        $grouped = collect($summary)->map(function ($item) {
+            $ing = $item['ingredient'];
+            
             return [
-                'id_bahan' => $first->id,
-                'nama_bahan' => $first->name_ingredients,
+                'id_bahan' => $ing->id,
+                'nama_bahan' => $ing->name_ingredients,
                 'detail_bahan' => [
-                    'jumlah' => $totalAmount,
-                    'satuan' => $first->pivot->unit_id
-                        ? \App\Models\Unit::find($first->pivot->unit_id)?->abbreviation ?? 'N/A'
-                        : 'N/A',
-                    // 'catatan' => $first->pivot->notes,
+                    'jumlah' => $item['total_amount'], // Gunakan hasil akumulasi kita
+                    'satuan' => $ing->unit 
+                        ? $ing->unit->abbreviation 
+                        : (\App\Models\Unit::find($ing->pivot->unit_id)?->abbreviation ?? 'N/A'),
                 ],
             ];
         })->values();
+
         return WeeklyIngredientResource::collection($grouped);
     }
 

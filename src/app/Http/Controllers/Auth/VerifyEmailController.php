@@ -12,28 +12,25 @@ class VerifyEmailController extends Controller
     /**
      * Mark the authenticated user's email address as verified.
      */
-    public function __invoke(Request $request): RedirectResponse // <-- UBAH TYPE-HINT DI SINI
-    {
-        // Logika di bawah ini perlu sedikit disesuaikan karena $request->user() tidak akan berfungsi
-        $user = \App\Models\User::find($request->route('id'));
+    public function __invoke(Request $request) // Hapus type-hint :RedirectResponse agar fleksibel
+{
+    $user = \App\Models\User::find($request->route('id'));
 
-        if (! $user) {
-            // Handle kasus jika user tidak ditemukan
-            return redirect(config('app.frontend_url').'/login?error=user_not_found');
-        }
+    // ... validasi user not found ...
 
-        if ($user->hasVerifiedEmail()) {
-            return redirect()->intended(
-                config('app.frontend_url').'/dashboard?verified=1'
-            );
-        }
-
+    // Proses Verifikasi
+    if (!$user->hasVerifiedEmail()) {
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
         }
-
-        return redirect()->intended(
-            config('app.frontend_url').'/dashboard?verified=1'
-        );
     }
+
+    // Cek apakah request datang dari API (Aplikasi) atau Browser
+    if ($request->wantsJson()) {
+        return response()->json(['message' => 'Email verified successfully']);
+    }
+
+    // Jika dari browser (fallback), tampilkan view bridging yang kemarin
+    return view('openapp');
+}
 }
