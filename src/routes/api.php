@@ -7,6 +7,12 @@ use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\MealPlanController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ProfileController;
+//sementara unutk testing
+Route::post('/recipes', [RecipeController::class, 'store']);
+Route::get('/categories', [RecipeController::class, 'getCategories']);
+Route::get('/countries', [RecipeController::class, 'getCountries']);
+Route::get('/ingredients', [RecipeController::class, 'getIngredients']);
+Route::get('/units', [RecipeController::class, 'getUnits']);
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
@@ -16,7 +22,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/recipes/{recipe}', [RecipeController::class, 'show'])->middleware('permission:view recipes');
     
     // Rute yang HANYA BISA DIAKSES OLEH ADMIN
-    Route::post('/recipes', [RecipeController::class, 'store'])->middleware('role:admin');
+    // Route::post('/recipes', [RecipeController::class, 'store'])->middleware('role:admin');
     Route::put('/recipes/{recipe}', [RecipeController::class, 'update'])->middleware('role:admin');
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update'])->middleware('role:admin');
     Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy'])->middleware('role:admin');

@@ -17,7 +17,7 @@ class RecipeResource extends JsonResource
             'url_gambar' => $this->image_url,
             'waktu_masak' => $this->cooking_time_minutes,
             // 'dibuat' => $this->created_at->diffForHumans(),
-            'kategori' => $this->category_id,
+            'kategori' => $this->category ? $this->category->name_category : null,
             'negara' => $this->country ? $this->country->name_country : null,
 
             'bahan' => IngredientResource::collection($this->whenLoaded('ingredients')),
