@@ -7,12 +7,16 @@ use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\MealPlanController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\IngredientController;
+use App\Http\Controllers\Api\UnitController;
 //sementara unutk testing
 Route::post('/recipes', [RecipeController::class, 'store']);
 Route::get('/categories', [RecipeController::class, 'getCategories']);
 Route::get('/countries', [RecipeController::class, 'getCountries']);
-Route::get('/ingredients', [RecipeController::class, 'getIngredients']);
-Route::get('/units', [RecipeController::class, 'getUnits']);
+Route::get('/ingredients', [IngredientController::class, 'getIngredients']);
+Route::post('/ingredients', [IngredientController::class, 'store']);
+Route::get('/units', [UnitController::class, 'getUnits']);
+Route::post('/units', [UnitController::class, 'store']);
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 

@@ -134,16 +134,7 @@ class RecipeController extends Controller
         // Mengambil semua data negara
         return response()->json(Country::all());
     }
-    public function getIngredients()
-    {
-        return response()->json(Ingredients::all());
-    }
-
-    public function getUnits()
-    {
-        return response()->json(Unit::all());
-    }
-
+    
     public function show(Recipe $recipe)
     {
         $recipe->load(['steps', 'ingredients']);
