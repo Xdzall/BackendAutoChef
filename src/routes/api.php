@@ -9,46 +9,65 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\IngredientController;
 use App\Http\Controllers\Api\UnitController;
-//sementara unutk testing
-Route::post('/recipes', [RecipeController::class, 'store']);
-Route::get('/categories', [RecipeController::class, 'getCategories']);
-Route::get('/countries', [RecipeController::class, 'getCountries']);
-Route::get('/ingredients', [IngredientController::class, 'getIngredients']);
-Route::post('/ingredients', [IngredientController::class, 'store']);
-Route::get('/units', [UnitController::class, 'getUnits']);
-Route::post('/units', [UnitController::class, 'store']);
 
+// =================================================================
+// 1. PUBLIC ROUTES (Bisa diakses tanpa login)
+// =================================================================
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+require __DIR__.'/auth.php';
 
+// =================================================================
+// 2. AUTHENTICATED ROUTES (Akses Mobile & Website dengan Token)
+// =================================================================
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+
+    // --- PROFIL USER ---
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+
+    // --- FITUR UTAMA (Lihat Resep & Kategori) ---
+    // PENTING: Route spesifik ('recommendations') harus di ATAS route dinamis ('{recipe}')
     Route::get('/recipes', [RecipeController::class, 'index'])->middleware('permission:view recipes');
     Route::get('/recipes/recommendations', [RecipeController::class, 'recommendations'])->middleware('permission:view recipes');
-    Route::get('/recipes/{recipe}', [RecipeController::class, 'show'])->middleware('permission:view recipes');
+    Route::get('/recipes/{recipe}', [RecipeController::class, 'show']); 
     
-    // Rute yang HANYA BISA DIAKSES OLEH ADMIN
-    // Route::post('/recipes', [RecipeController::class, 'store'])->middleware('role:admin');
-    Route::put('/recipes/{recipe}', [RecipeController::class, 'update'])->middleware('role:admin');
-    Route::patch('/recipes/{recipe}', [RecipeController::class, 'update'])->middleware('role:admin');
-    Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy'])->middleware('role:admin');
-});
+    Route::get('/categories', [RecipeController::class, 'getCategories']);
+    Route::get('/categories/{categoryId}/recipes', [RecipeController::class, 'getByCategory']);
+    Route::get('/countries', [RecipeController::class, 'getCountries']);
 
-Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    Route::get('/favorites', [FavoriteController::class, 'index']);
-    Route::post('/recipes/{recipe}/favorites', [FavoriteController::class, 'toggleFavorite']);
-});
+    // --- DATA MASTER (Read-only untuk umum) ---
+    Route::get('/ingredients', [IngredientController::class, 'getIngredients']);
+    Route::get('/units', [UnitController::class, 'getUnits']);
 
-Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    // --- MEAL PLANS ---
     Route::get('/meal-plans', [MealPlanController::class, 'index']);
     Route::post('/meal-plans', [MealPlanController::class, 'store']);
     Route::delete('/meal-plans/{day}/{recipeId}', [MealPlanController::class, 'destroy']);
     Route::get('/meal-plans/weekly/ingredients', [MealPlanController::class, 'weeklyIngredients']);
     Route::get('/meal-plans/{day}/ingredients', [MealPlanController::class, 'ingredients']);
-});
 
-Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    Route::get('/profile', [ProfileController::class, 'show']);
-    Route::put('/profile', [ProfileController::class, 'update']);
-    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
-});
+    // --- FAVORITES ---
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/recipes/{recipe}/favorites', [FavoriteController::class, 'toggleFavorite']);
 
-require __DIR__.'/auth.php';
+
+    // =================================================================
+    // 3. ADMIN ROUTES (Hanya untuk akses dari Website Kelola Resep)
+    // =================================================================
+    Route::middleware(['role:admin'])->group(function () {
+        
+        // Manajemen Resep (Create, Update, Delete)
+        Route::get('/recipes-list', [RecipeController::class, 'getRecipeList']); 
+        Route::post('/recipes', [RecipeController::class, 'store']);
+        Route::put('/recipes/{recipe}', [RecipeController::class, 'update']);
+        Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);
+        Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy']);
+
+        // Manajemen Master Data (Hanya admin yang boleh nambah bahan & unit)
+        Route::post('/ingredients', [IngredientController::class, 'store']);
+        Route::post('/ingredients/{id}/nutrition', [IngredientController::class, 'updateNutrition']);
+        Route::post('/units', [UnitController::class, 'store']);
+        
+    });
+});

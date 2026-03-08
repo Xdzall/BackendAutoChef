@@ -21,6 +21,7 @@ class IngredientResource extends JsonResource
             'detail_bahan' => $this->whenPivotLoaded('ingredients_details', function () {
                 return [
                     'jumlah' => $this->pivot->amount,
+                    'unit_id' => $this->pivot->unit_id,
                     'satuan' => Unit::find($this->pivot->unit_id)?->abbreviation ?? 'N/A',
                     'catatan' => $this->pivot->notes,
                 ];

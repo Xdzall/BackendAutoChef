@@ -14,17 +14,17 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // --- Buat Permissions ---
-        Permission::create(['name' => 'view recipes']);
-        Permission::create(['name' => 'create recipes']);
-        Permission::create(['name' => 'edit recipes']);
-        Permission::create(['name' => 'delete recipes']);
+        Permission::firstOrCreate(['name' => 'view recipes']);
+        Permission::firstOrCreate(['name' => 'create recipes']);
+        Permission::firstOrCreate(['name' => 'edit recipes']);
+        Permission::firstOrCreate(['name' => 'delete recipes']);
 
         // --- Buat Role 'user' dan berikan izin ---
-        $userRole = Role::create(['name' => 'user']);
+        $userRole = Role::firstOrCreate(['name' => 'user']);
         $userRole->givePermissionTo('view recipes'); // User hanya bisa melihat
 
         // --- Buat Role 'admin' dan berikan semua izin ---
-        $adminRole = Role::create(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->givePermissionTo(Permission::all());
     }
 }

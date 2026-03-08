@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Models\Recipe;
+use App\Models\NutritionIngredient;
 
 class Ingredients extends Model
 {
@@ -24,4 +25,10 @@ class Ingredients extends Model
         return $this->belongsToMany(Recipe::class, 'ingredients_details')
                     ->withPivot('amount', 'unit_id', 'notes');
     }
+
+    public function nutrition()
+    {
+        return $this->hasOne(NutritionIngredient::class, 'ingredient_id', 'id');
+    }
 }
+    

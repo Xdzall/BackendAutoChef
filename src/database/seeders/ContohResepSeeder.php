@@ -15,8 +15,6 @@ class ContohResepSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('recipe')->truncate();
-
         DB::transaction(function () {
 
             $recipes = [
@@ -1013,26 +1011,33 @@ class ContohResepSeeder extends Seeder
             ];
 
             foreach ($recipes as $data) {
+                // 2. CEK DULU: Apakah resep ini sudah ada di database?
+                $isExist = Recipe::where('name_recipe', $data['name'])->exists();
+                
+                if ($isExist) {
+                    $this->command->info("⏩ Resep \"{$data['name']}\" sudah ada, dilewati.");
+                    continue; // Langsung lompat ke resep berikutnya, hemat kuota upload MinIO!
+                }
+
+                // Jika belum ada, baru kita proses upload gambar
                 $filePath = database_path('seeders/images/' . $data['image']);
+                $imageUrl = null;
 
-                if (!file_exists($filePath)) {
+                if (file_exists($filePath)) {
+                    $path = Storage::disk('s3')->putFile('recipe-images', new \Illuminate\Http\File($filePath), 'public');
+                    if ($path) {
+                        $imageUrl = Storage::disk('s3')->url($path);
+                    } else {
+                        $this->command->error("⚠️ Gagal upload gambar {$data['name']} ke MinIO.");
+                    }
+                } else {
                     $this->command->error("❌ File gambar tidak ditemukan: {$data['image']}");
-                    continue;
                 }
-
-                // Upload ke MinIO
-                $path = Storage::disk('s3')->putFile('recipe-images', new File($filePath), 'public');
-                if (!$path) {
-                    $this->command->error("⚠️ Gagal upload gambar {$data['name']} ke MinIO.");
-                    continue;
-                }
-
-                $imageUrl = Storage::disk('s3')->url($path);
 
                 // Buat atau ambil country
                 $country = Country::firstOrCreate(['name_country' => $data['country_name']]);
 
-                // Buat resep
+                // 3. Buat resep baru
                 $recipe = Recipe::create([
                     'name_recipe' => $data['name'],
                     'image_url' => $imageUrl,
