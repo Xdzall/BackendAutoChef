@@ -19,7 +19,14 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => [
+        'http://localhost:3000',                        // Frontend React Local
+        'http://100.120.18.38:3000',
+        'http://localhost:8000',                        // Backend Local (jaga-jaga)
+        'http://localhost:8080',                        // Backend Local (jaga-jaga port lain)
+        env('FRONTEND_URL', 'http://localhost:3000'),   // Alamat dari .env (biasanya Ngrok)
+        'https://unitemized-giovanna-centrally.ngrok-free.dev', // Alamat Ngrok Anda (Hardcode biar aman)
+    ],
 
     'allowed_origins_patterns' => [],
 
