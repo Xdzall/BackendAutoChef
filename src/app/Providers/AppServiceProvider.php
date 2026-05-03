@@ -6,6 +6,8 @@ use Illuminate\Auth\Notifications\ResetPassword; // <-- Ini untuk Reset Password
 use Illuminate\Auth\Notifications\VerifyEmail;   // <-- TAMBAHKAN INI (Untuk Verifikasi Email)
 use Illuminate\Support\Facades\URL;              // <-- TAMBAHKAN INI (Dibutuhkan oleh VerifyEmail)
 use Illuminate\Support\ServiceProvider;
+use App\Models\Recipe;
+use App\Observers\RecipeObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -50,5 +52,7 @@ class AppServiceProvider extends ServiceProvider
 
             return $frontendUrl;
         });
+
+        Recipe::observe(RecipeObserver::class);
     }
 }

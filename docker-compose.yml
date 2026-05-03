@@ -72,6 +72,21 @@ services:
     networks:
       - autochefnetwork
 
+  queueautochef:
+    build: .
+    image: autochef-app:latest
+    container_name: queueautochef
+    volumes:
+      - /var/www/vendor
+      - ./src:/var/www
+    networks:
+      - autochefnetwork
+    depends_on:
+      - redisautochef
+      - dbautochef
+      - backendautochef
+    command: php artisan queue:work redis --sleep=3 --tries=3
+
 networks:
   autochefnetwork:
     driver: bridge
