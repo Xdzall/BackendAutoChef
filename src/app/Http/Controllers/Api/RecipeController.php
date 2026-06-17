@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Country;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class RecipeController extends Controller
 {
@@ -17,18 +18,150 @@ class RecipeController extends Controller
         $query = Recipe::query();
 
         if ($request->has('search')) {
-            $searchTerm = $request->input('search');
-            $query->whereRaw('LOWER(name_recipe) LIKE ?', ['%' . strtolower($searchTerm) . '%']);
+            $searchTerm = strtolower($request->input('search'));
+            
+            // 1. Tokenisasi kata pencarian mentah dari user
+            $rawSearchTokens = explode(' ', $searchTerm);
+            
+            // 2. Ambil semua vektor resep
+            $recipeVectors = DB::table('recipe_vectors')->get();
+            
+            // 3. Bangun "Kamus Vocabulary" dari seluruh kata yang ada di vektor database
+            $vocabulary = [];
+            foreach ($recipeVectors as $rv) {
+                $vectorData = json_decode($rv->vector, true);
+                if (is_array($vectorData)) {
+                    foreach (array_keys($vectorData) as $word) {
+                        $vocabulary[$word] = true;
+                    }
+                }
+            }
+            $vocabulary = array_keys($vocabulary);
+
+            // 4. Proses Koreksi Typo menggunakan Levenshtein Distance
+            $correctedTokens = [];
+            foreach ($rawSearchTokens as $token) {
+                $closestWord = $token;
+                $shortestDistance = -1;
+                
+                // Logika Toleransi: 
+                // Jika panjang kata <= 4 huruf, toleransi salah ketik maksimal 1 huruf.
+                // Jika > 4 huruf, toleransi maksimal 2 huruf.
+                $tolerance = strlen($token) <= 4 ? 1 : 2;
+
+                // Jika kata sudah persis ada di kamus, tidak perlu dikoreksi
+                if (in_array($token, $vocabulary)) {
+                    $correctedTokens[] = $token;
+                    continue; 
+                }
+
+                // Jika tidak ada, cari kata dengan ejaan terdekat di kamus
+                foreach ($vocabulary as $word) {
+                    // Fungsi bawaan PHP untuk menghitung jarak perbedaan string
+                    $distance = levenshtein($token, $word);
+                    
+                    if ($distance <= $tolerance) {
+                        if ($shortestDistance < 0 || $distance < $shortestDistance) {
+                            $closestWord = $word;
+                            $shortestDistance = $distance;
+                        }
+                    }
+                }
+                $correctedTokens[] = $closestWord; // Masukkan kata hasil koreksi
+            }
+
+            // 5. Buat Query Vector berdasarkan token yang SUDAH dikoreksi
+            $queryVector = array_count_values($correctedTokens);
+            $similarities = [];
+
+            // 6. Hitung Cosine Similarity seperti biasa
+            foreach ($recipeVectors as $rv) {
+                $vectorData = json_decode($rv->vector, true);
+                $score = $this->calculateCosineSimilarity($queryVector, $vectorData);
+                
+                if ($score > 0) {
+                    $similarities[$rv->recipe_id] = $score;
+                }
+            }
+
+            // 7. Urutkan berdasarkan skor tertinggi (descending)
+            arsort($similarities);
+            $matchedIds = array_keys($similarities);
+
+            if (empty($matchedIds)) {
+                return RecipeResource::collection([]);
+            }
+
+            // 8. Terapkan hasil pencarian ke query utama (dengan array_position untuk PostgreSQL)
+            $idString = implode(',', $matchedIds);
+            $query->whereIn('id', $matchedIds)
+                ->orderByRaw("array_position(ARRAY[{$idString}]::bigint[], id)");
+                
+            $recipes = $query->paginate(100);
+            return RecipeResource::collection($recipes);
         }
 
         $recipes = $query->paginate(100);
         return RecipeResource::collection($recipes);
     }
 
-    public function recommendations()
+    public function recommendations(Request $request)
     {
-        $randomRecipes = Recipe::inRandomOrder()->limit(9)->get();
-        return RecipeResource::collection($randomRecipes);
+        $user = $request->user();
+        
+        // Jika user belum login atau belum punya favorit, kembalikan rekomendasi default/populer
+        if (!$user || $user->favorites()->count() == 0) {
+            $randomRecipes = Recipe::inRandomOrder()->limit(9)->get();
+            return RecipeResource::collection($randomRecipes);
+        }
+
+        // 1. Ambil ID resep favorit user
+        $favoriteRecipeIds = $user->favorites()->pluck('recipe.id')->toArray();
+
+        // 2. Ambil vektor dari resep-resep favorit untuk membentuk "User Profile Vector"
+        $favoriteVectors = DB::table('recipe_vectors')
+            ->whereIn('recipe_id', $favoriteRecipeIds)
+            ->get();
+
+        $userProfileVector = [];
+        foreach ($favoriteVectors as $rv) {
+            $vectorData = json_decode($rv->vector, true);
+            foreach ($vectorData as $term => $weight) {
+                if (!isset($userProfileVector[$term])) {
+                    $userProfileVector[$term] = 0;
+                }
+                $userProfileVector[$term] += $weight; // Menggabungkan bobot
+            }
+        }
+
+        // 3. Ambil vektor resep lain yang BELUM difavoritkan user
+        $otherRecipeVectors = DB::table('recipe_vectors')
+            ->whereNotIn('recipe_id', $favoriteRecipeIds)
+            ->get();
+
+        $similarities = [];
+
+        // 4. Hitung kedekatan User Profile Vector dengan resep-resep lain
+        foreach ($otherRecipeVectors as $rv) {
+            $vectorData = json_decode($rv->vector, true);
+            $score = $this->calculateCosineSimilarity($userProfileVector, $vectorData);
+            $similarities[$rv->recipe_id] = $score;
+        }
+
+        // 5. Urutkan berdasarkan skor tertinggi dan ambil 9 teratas
+        arsort($similarities);
+        $topRecommendationIds = array_slice(array_keys($similarities), 0, 9);
+
+        if (empty($topRecommendationIds)) {
+            return RecipeResource::collection(Recipe::inRandomOrder()->limit(9)->get());
+        }
+
+        $idString = implode(',', $topRecommendationIds);
+        $recommendedRecipes = Recipe::whereIn('id', $topRecommendationIds)
+            ->orderByRaw("array_position(ARRAY[{$idString}]::bigint[], id)")
+            ->get();
+
+        return RecipeResource::collection($recommendedRecipes);
     }
 
     // --- FITUR CREATE (BUAT RESEP BARU) ---
@@ -247,5 +380,27 @@ class RecipeController extends Controller
     {
         $recipe->delete();
         return response()->noContent();
+    }
+
+    private function calculateCosineSimilarity(array $vecA, array $vecB)
+    {
+        $dotProduct = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+
+        $allKeys = array_unique(array_merge(array_keys($vecA), array_keys($vecB)));
+
+        foreach ($allKeys as $key) {
+            $valA = $vecA[$key] ?? 0.0;
+            $valB = $vecB[$key] ?? 0.0;
+
+            $dotProduct += ($valA * $valB);
+            $normA += pow($valA, 2);
+            $normB += pow($valB, 2);
+        }
+
+        if ($normA == 0 || $normB == 0) return 0;
+
+        return $dotProduct / (sqrt($normA) * sqrt($normB));
     }
 }
