@@ -34,7 +34,11 @@ class RegisteredUserController extends Controller
 
         $user->assignRole('user');
 
-        event(new Registered($user));
+        try {
+            event(new Registered($user));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Email verification failed to send: ' . $e->getMessage());
+        }
 
         // Auth::login($user);
 
