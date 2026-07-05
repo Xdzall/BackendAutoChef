@@ -117,12 +117,16 @@ class RecipeController extends Controller
 
         // 1. Ambil ID resep favorit user
         $favoriteRecipeIds = $user->favorites()->pluck('recipe.id')->toArray();
+        $favoriteCount = count($favoriteRecipeIds);
 
         // 2. Ambil vektor dari resep-resep favorit untuk membentuk "User Profile Vector"
         $favoriteVectors = DB::table('recipe_vectors')
             ->whereIn('recipe_id', $favoriteRecipeIds)
             ->get();
 
+        // 3. Bangun User Profile Vector dengan RATA-RATA (bukan penjumlahan)
+        //    Ini menghilangkan frequency bias dimana bahan/nama yang muncul
+        //    di banyak resep favorit tidak akan mendominasi secara tidak adil
         $userProfileVector = [];
         foreach ($favoriteVectors as $rv) {
             $vectorData = json_decode($rv->vector, true);
@@ -130,34 +134,91 @@ class RecipeController extends Controller
                 if (!isset($userProfileVector[$term])) {
                     $userProfileVector[$term] = 0;
                 }
-                $userProfileVector[$term] += $weight; // Menggabungkan bobot
+                $userProfileVector[$term] += $weight;
             }
         }
 
-        // 3. Ambil vektor resep lain yang BELUM difavoritkan user
+        // Normalisasi Mean: bagi setiap bobot dengan jumlah resep favorit
+        foreach ($userProfileVector as $term => $weight) {
+            $userProfileVector[$term] = $weight / $favoriteCount;
+        }
+
+        // 4. IDF Re-weighting: kurangi pengaruh kata-kata umum (bawang, garam, air, dll.)
+        //    Kata yang muncul di hampir semua resep punya IDF rendah → bobotnya ditekan
+        //    Kata spesifik (rendang, sashimi) punya IDF tinggi → bobotnya ditonjolkan
+        $allVectors = DB::table('recipe_vectors')->get();
+        $totalDocs = $allVectors->count();
+        $documentFrequency = [];
+
+        foreach ($allVectors as $rv) {
+            $vectorData = json_decode($rv->vector, true);
+            if (is_array($vectorData)) {
+                foreach (array_keys($vectorData) as $term) {
+                    if (!isset($documentFrequency[$term])) {
+                        $documentFrequency[$term] = 0;
+                    }
+                    $documentFrequency[$term]++;
+                }
+            }
+        }
+
+        // Terapkan IDF re-weighting pada User Profile Vector
+        foreach ($userProfileVector as $term => $weight) {
+            $df = $documentFrequency[$term] ?? 1;
+            $idf = log10($totalDocs / $df);
+            $userProfileVector[$term] = $weight * $idf;
+        }
+
+        // Hapus term dengan bobot sangat kecil (noise reduction)
+        $userProfileVector = array_filter($userProfileVector, function ($w) {
+            return $w > 0.01;
+        });
+
+        // 5. Hitung cosine similarity dengan resep-resep yang BELUM difavoritkan
         $otherRecipeVectors = DB::table('recipe_vectors')
             ->whereNotIn('recipe_id', $favoriteRecipeIds)
             ->get();
 
         $similarities = [];
+        $recipeVectorMap = []; // Simpan vektor untuk dipakai MMR
 
-        // 4. Hitung kedekatan User Profile Vector dengan resep-resep lain
         foreach ($otherRecipeVectors as $rv) {
             $vectorData = json_decode($rv->vector, true);
             $score = $this->calculateCosineSimilarity($userProfileVector, $vectorData);
-            $similarities[$rv->recipe_id] = $score;
+            if ($score > 0) {
+                $similarities[$rv->recipe_id] = $score;
+                $recipeVectorMap[$rv->recipe_id] = $vectorData;
+            }
         }
 
-        // 5. Urutkan berdasarkan skor tertinggi dan ambil 9 teratas
+        // 6. Ambil top-30 kandidat berdasarkan cosine similarity
         arsort($similarities);
-        $topRecommendationIds = array_slice(array_keys($similarities), 0, 9);
+        $topCandidateIds = array_slice(array_keys($similarities), 0, 30);
 
-        if (empty($topRecommendationIds)) {
+        if (empty($topCandidateIds)) {
             return RecipeResource::collection(Recipe::inRandomOrder()->limit(9)->get());
         }
 
-        $idString = implode(',', $topRecommendationIds);
-        $recommendedRecipes = Recipe::whereIn('id', $topRecommendationIds)
+        // 7. MMR Diversification: pilih 9 terbaik dari 30 kandidat
+        //    dengan mempertimbangkan relevansi DAN keragaman konten
+        $candidateVectors = [];
+        foreach ($topCandidateIds as $id) {
+            $candidateVectors[$id] = $recipeVectorMap[$id];
+        }
+
+        $selectedIds = $this->applyMMRDiversification(
+            $candidateVectors,
+            $similarities,
+            9,    // jumlah rekomendasi yang diinginkan
+            0.7   // lambda: 70% relevansi, 30% keragaman
+        );
+
+        if (empty($selectedIds)) {
+            return RecipeResource::collection(Recipe::inRandomOrder()->limit(9)->get());
+        }
+
+        $idString = implode(',', $selectedIds);
+        $recommendedRecipes = Recipe::whereIn('id', $selectedIds)
             ->orderByRaw("array_position(ARRAY[{$idString}]::bigint[], id)")
             ->get();
 
@@ -380,6 +441,64 @@ class RecipeController extends Controller
     {
         $recipe->delete();
         return response()->noContent();
+    }
+
+    /**
+     * Maximal Marginal Relevance (MMR) Diversification
+     *
+     * Memilih item secara iteratif dengan menyeimbangkan:
+     * - Relevansi terhadap user profile (cosine similarity tinggi)
+     * - Keragaman terhadap item yang sudah dipilih (beda konten)
+     *
+     * Rumus: MMR(r) = λ * sim(r, userProfile) - (1-λ) * max_s∈S sim(r, s)
+     *
+     * @param array $candidateVectors  Vektor TF-IDF kandidat [recipe_id => vector]
+     * @param array $relevanceScores   Skor cosine similarity terhadap user profile [recipe_id => score]
+     * @param int   $limit             Jumlah item yang dipilih
+     * @param float $lambda            Bobot relevansi vs keragaman (0.0-1.0)
+     * @return array                   Array of selected recipe IDs
+     */
+    private function applyMMRDiversification(array $candidateVectors, array $relevanceScores, int $limit, float $lambda): array
+    {
+        $selected = [];
+        $remaining = array_keys($candidateVectors);
+
+        for ($i = 0; $i < $limit && !empty($remaining); $i++) {
+            $bestScore = -INF;
+            $bestId = null;
+            $bestIdx = null;
+
+            foreach ($remaining as $idx => $candidateId) {
+                // Komponen 1: Relevansi (cosine similarity terhadap user profile)
+                $relevance = $relevanceScores[$candidateId] ?? 0;
+
+                // Komponen 2: Redundansi (similarity maksimal terhadap item yang sudah dipilih)
+                $maxSimilarityToSelected = 0;
+                foreach ($selected as $selectedId) {
+                    $sim = $this->calculateCosineSimilarity(
+                        $candidateVectors[$candidateId],
+                        $candidateVectors[$selectedId]
+                    );
+                    $maxSimilarityToSelected = max($maxSimilarityToSelected, $sim);
+                }
+
+                // Rumus MMR: balance antara relevansi dan keragaman
+                $mmrScore = ($lambda * $relevance) - ((1 - $lambda) * $maxSimilarityToSelected);
+
+                if ($mmrScore > $bestScore) {
+                    $bestScore = $mmrScore;
+                    $bestId = $candidateId;
+                    $bestIdx = $idx;
+                }
+            }
+
+            if ($bestId !== null) {
+                $selected[] = $bestId;
+                unset($remaining[$bestIdx]);
+            }
+        }
+
+        return $selected;
     }
 
     private function calculateCosineSimilarity(array $vecA, array $vecB)
