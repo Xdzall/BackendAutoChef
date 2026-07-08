@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Notifications\ResetPasswordOtp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class PasswordResetLinkController extends Controller
 {
     /**
-     * Handle an incoming password reset link request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Kirim OTP ke email pengguna untuk reset password.
+     * Validasi bahwa email terdaftar di database.
      */
     public function store(Request $request): JsonResponse
     {
@@ -21,19 +22,32 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        // Cek apakah email terdaftar di database
+        $user = User::where('email', $request->email)->first();
 
-        if ($status != Password::RESET_LINK_SENT) {
-            throw ValidationException::withMessages([
-                'email' => [__($status)],
-            ]);
+        if (!$user) {
+            return response()->json([
+                'message' => 'Email tidak terdaftar.',
+            ], 404);
         }
 
-        return response()->json(['status' => __($status)]);
+        // Generate OTP 6 digit
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Simpan OTP (hashed) di tabel password_reset_tokens
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $request->email],
+            [
+                'token' => Hash::make($otp),
+                'created_at' => now(),
+            ]
+        );
+
+        // Kirim OTP via email
+        $user->notify(new ResetPasswordOtp($otp));
+
+        return response()->json([
+            'message' => 'Kode OTP telah dikirim ke email Anda.',
+        ]);
     }
 }

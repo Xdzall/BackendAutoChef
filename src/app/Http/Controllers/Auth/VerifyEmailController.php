@@ -3,34 +3,51 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request; // <-- TAMBAHKAN IMPORT INI
+use Illuminate\Http\Request;
 
 class VerifyEmailController extends Controller
 {
     /**
-     * Mark the authenticated user's email address as verified.
+     * Verifikasi email pengguna dari link yang dikirim.
      */
-    public function __invoke(Request $request) // Hapus type-hint :RedirectResponse agar fleksibel
-{
-    $user = \App\Models\User::find($request->route('id'));
+    public function __invoke(Request $request)
+    {
+        $user = User::find($request->route('id'));
 
-    // ... validasi user not found ...
+        if (!$user) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'User tidak ditemukan.'], 404);
+            }
+            return view('openapp', ['status' => 'error', 'message' => 'User tidak ditemukan.']);
+        }
 
-    // Proses Verifikasi
-    if (!$user->hasVerifiedEmail()) {
+        // Validasi hash email
+        if (!hash_equals(sha1($user->getEmailForVerification()), (string) $request->route('hash'))) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Link verifikasi tidak valid.'], 403);
+            }
+            return view('openapp', ['status' => 'error', 'message' => 'Link verifikasi tidak valid.']);
+        }
+
+        // Proses verifikasi
+        if ($user->hasVerifiedEmail()) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Email sudah terverifikasi sebelumnya.']);
+            }
+            return view('openapp', ['status' => 'already_verified', 'message' => 'Email sudah terverifikasi.']);
+        }
+
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
         }
-    }
 
-    // Cek apakah request datang dari API (Aplikasi) atau Browser
-    if ($request->wantsJson()) {
-        return response()->json(['message' => 'Email verified successfully']);
-    }
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Email berhasil diverifikasi.']);
+        }
 
-    // Jika dari browser (fallback), tampilkan view bridging yang kemarin
-    return view('openapp');
-}
+        // Redirect ke deep link atau tampilkan halaman bridging
+        return view('openapp', ['status' => 'success', 'message' => 'Email berhasil diverifikasi!']);
+    }
 }

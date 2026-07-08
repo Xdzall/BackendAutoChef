@@ -24,9 +24,15 @@ class AuthController extends Controller
 
         $user = $request->user();
 
+        // Cek apakah email sudah diverifikasi
         if (is_null($user->email_verified_at)) {
+            // Logout session agar tidak tersimpan
+            Auth::guard('web')->logout();
+
             return response()->json([
-                'message' => 'Akun belum diverifikasi.',
+                'message' => 'Akun belum diverifikasi. Silakan cek email Anda atau kirim ulang verifikasi.',
+                'requires_verification' => true,
+                'email' => $user->email,
             ], 403);
         }
 

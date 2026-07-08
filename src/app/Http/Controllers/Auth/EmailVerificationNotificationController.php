@@ -3,23 +3,40 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class EmailVerificationNotificationController extends Controller
 {
     /**
-     * Send a new email verification notification.
+     * Kirim ulang email verifikasi.
+     * Tidak memerlukan autentikasi - cukup kirim email yang terdaftar.
      */
-    public function store(Request $request): JsonResponse|RedirectResponse
+    public function store(Request $request): JsonResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended('/dashboard');
+        $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Email tidak terdaftar.',
+            ], 404);
         }
 
-        $request->user()->sendEmailVerificationNotification();
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Email sudah terverifikasi.',
+            ]);
+        }
 
-        return response()->json(['status' => 'verification-link-sent']);
+        $user->sendEmailVerificationNotification();
+
+        return response()->json([
+            'message' => 'Link verifikasi telah dikirim ke email Anda.',
+        ]);
     }
 }
