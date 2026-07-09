@@ -6,12 +6,18 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\VerifyOtpController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [RegisteredUserController::class, 'store'])
     ->middleware('guest')
     ->name('register');
+
+// --- Login via Google ---
+Route::post('/auth/google', GoogleAuthController::class)
+    ->middleware(['throttle:10,1'])
+    ->name('auth.google');
 
 // --- Email Verifikasi ---
 Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)
