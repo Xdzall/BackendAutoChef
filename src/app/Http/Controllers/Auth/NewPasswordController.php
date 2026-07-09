@@ -65,7 +65,6 @@ class NewPasswordController extends Controller
 
         $user->forceFill([
             'password' => Hash::make($request->string('password')),
-            'remember_token' => Str::random(60),
         ])->save();
 
         // Hapus token dari database
