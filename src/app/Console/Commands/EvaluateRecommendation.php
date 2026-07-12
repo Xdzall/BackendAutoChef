@@ -30,7 +30,7 @@ class EvaluateRecommendation extends Command
         ];
         
         $validUsersCount = 0;
-        $k = 10; // Top-K recommendations to evaluate
+        $k = 5; // Top-K recommendations to evaluate. Diubah ke 5 agar perubahan ranking lebih terlihat pada dataset kecil.
 
         // Pre-load semua vector
         $allVectors = DB::table('recipe_vectors')->get()->keyBy('recipe_id');
@@ -84,15 +84,17 @@ class EvaluateRecommendation extends Command
             $standardProfile = $userProfileVector;
 
             // SIMPAN PROFIL UNTUK METODE 2: TF-IDF + DFA
+            // Modifikasi DFA lebih agresif: Top 3 dikali 3.0, sisanya dikali 0.5
             $dfaProfile = $standardProfile;
             arsort($dfaProfile);
-            $amplificationFactor = 1.5;
             $count = 0;
             foreach ($dfaProfile as $term => $weight) {
                 if ($count < 3) {
-                    $dfaProfile[$term] = $weight * $amplificationFactor;
-                    $count++;
-                } else break;
+                    $dfaProfile[$term] = $weight * 3.0; 
+                } else {
+                    $dfaProfile[$term] = $weight * 0.5;
+                }
+                $count++;
             }
 
             // --- EVALUASI METODE 1 (STANDARD) ---
