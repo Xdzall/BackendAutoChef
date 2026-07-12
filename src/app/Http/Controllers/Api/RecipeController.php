@@ -177,20 +177,20 @@ class RecipeController extends Controller
         // --- NOVELTY ALGORITMA: Dominant Feature Amplification (DFA) ---
         // Penjelasan untuk paper: "We introduce Dominant Feature Amplification (DFA) 
         // to the user profile vector. DFA identifies the top 3 most prominent ingredients 
-        // in the user's profile and amplifies them by a factor (e.g., 1.5). This ensures 
-        // that the system prioritizes the user's core taste preferences over secondary spices."
+        // in the user's profile and amplifies them by a factor of 3.0, while decaying 
+        // secondary ingredients by a factor of 0.5. This ensures that the system strongly 
+        // prioritizes the user's core taste preferences."
         arsort($userProfileVector); 
-        $amplificationFactor = 1.5;
         $topK = 3; 
         
         $count = 0;
         foreach ($userProfileVector as $term => $weight) {
             if ($count < $topK) {
-                $userProfileVector[$term] = $weight * $amplificationFactor;
-                $count++;
+                $userProfileVector[$term] = $weight * 3.0; // Amplifikasi bahan utama
             } else {
-                break;
+                $userProfileVector[$term] = $weight * 0.5; // Penalti/Decay bahan sekunder
             }
+            $count++;
         }
         // ---------------------------------------------------------------
 
