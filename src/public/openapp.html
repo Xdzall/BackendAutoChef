@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Buka AutoChef</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script>
+    window.onload = function() {
+      // Deep link ke aplikasi
+      var appLink = "autochef://email/verified?verified=true";
+      // Fallback ke Play Store jika app tidak terinstal
+      var playStoreLink = "https://play.google.com/store/apps/details?id=com.autochef.app";
+
+      // Coba buka aplikasi
+      window.location = appLink;
+
+      // Jika setelah 2 detik tidak pindah (app belum ada), buka Play Store
+      setTimeout(function() {
+        window.location = playStoreLink;
+      }, 2000);
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 50px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Membuka aplikasi AutoChef...</h2>
+  <p>Jika tidak terbuka, <a href="https://play.google.com/store/apps/details?id=com.autochef.app">klik di sini</a> untuk mengunduh di Play Store.</p>
+</body>
+</html>
