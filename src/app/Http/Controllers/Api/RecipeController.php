@@ -174,6 +174,26 @@ class RecipeController extends Controller
             return $w > 0.01;
         });
 
+        // --- NOVELTY ALGORITMA: Dominant Feature Amplification (DFA) ---
+        // Penjelasan untuk paper: "We introduce Dominant Feature Amplification (DFA) 
+        // to the user profile vector. DFA identifies the top 3 most prominent ingredients 
+        // in the user's profile and amplifies them by a factor (e.g., 1.5). This ensures 
+        // that the system prioritizes the user's core taste preferences over secondary spices."
+        arsort($userProfileVector); 
+        $amplificationFactor = 1.5;
+        $topK = 3; 
+        
+        $count = 0;
+        foreach ($userProfileVector as $term => $weight) {
+            if ($count < $topK) {
+                $userProfileVector[$term] = $weight * $amplificationFactor;
+                $count++;
+            } else {
+                break;
+            }
+        }
+        // ---------------------------------------------------------------
+
         // 5. Hitung cosine similarity dengan resep-resep yang BELUM difavoritkan
         $otherRecipeVectors = DB::table('recipe_vectors')
             ->whereNotIn('recipe_id', $favoriteRecipeIds)
