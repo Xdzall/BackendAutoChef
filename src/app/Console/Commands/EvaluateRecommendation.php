@@ -30,7 +30,7 @@ class EvaluateRecommendation extends Command
         ];
         
         $validUsersCount = 0;
-        $k = 5; // Top-K recommendations to evaluate. Diubah ke 5 agar perubahan ranking lebih terlihat pada dataset kecil.
+        $k = 10; // Kembalikan ke 10 agar ada hit, tapi kita gunakan MRR untuk membedakan ranking
 
         // Pre-load semua vector
         $allVectors = DB::table('recipe_vectors')->get()->keyBy('recipe_id');
@@ -47,6 +47,11 @@ class EvaluateRecommendation extends Command
                 }
             }
         }
+
+        $metrics = [
+            'standard' => ['precision' => 0, 'recall' => 0, 'f1' => 0, 'mrr' => 0],
+            'dfa'      => ['precision' => 0, 'recall' => 0, 'f1' => 0, 'mrr' => 0],
+        ];
 
         foreach ($users as $user) {
             $favorites = $user->favorites()->pluck('recipe.id')->toArray();
@@ -102,12 +107,14 @@ class EvaluateRecommendation extends Command
             $metrics['standard']['precision'] += $resStandard['precision'];
             $metrics['standard']['recall'] += $resStandard['recall'];
             $metrics['standard']['f1'] += $resStandard['f1'];
+            $metrics['standard']['mrr'] += $resStandard['mrr'];
 
             // --- EVALUASI METODE 2 (DFA) ---
             $resDFA = $this->evaluateProfile($dfaProfile, $allVectors, $trainSet, $testSet, $k);
             $metrics['dfa']['precision'] += $resDFA['precision'];
             $metrics['dfa']['recall'] += $resDFA['recall'];
             $metrics['dfa']['f1'] += $resDFA['f1'];
+            $metrics['dfa']['mrr'] += $resDFA['mrr'];
 
             $validUsersCount++;
         }
@@ -122,24 +129,26 @@ class EvaluateRecommendation extends Command
         $this->info(" PERBANDINGAN ALGORITMA REKOMENDASI (TOP-$k)          ");
         $this->info(" Total User Dievaluasi: $validUsersCount");
         $this->info("======================================================");
-        $this->line(sprintf("%-20s | %-12s | %-12s", "Metrik", "TF-IDF Biasa", "TF-IDF + DFA (Novelty)"));
+        $this->line(sprintf("%-20s | %-12s | %-12s", "Metrik", "TF-IDF Biasa", "TF-IDF + DFA"));
         $this->info("------------------------------------------------------");
         
-        $metricsList = ['precision' => 'Precision', 'recall' => 'Recall', 'f1' => 'F1-Score'];
+        $metricsList = ['precision' => 'Precision', 'recall' => 'Recall', 'f1' => 'F1-Score', 'mrr' => 'MRR'];
         foreach ($metricsList as $key => $label) {
-            $valStd = ($metrics['standard'][$key] / $validUsersCount) * 100;
-            $valDfa = ($metrics['dfa'][$key] / $validUsersCount) * 100;
-            $this->line(sprintf("%-20s | %-11s%% | %-11s%%", 
-                $label, 
-                number_format($valStd, 2), 
-                number_format($valDfa, 2)
-            ));
+            $valStd = ($metrics['standard'][$key] / $validUsersCount) * ($key == 'mrr' ? 1 : 100);
+            $valDfa = ($metrics['dfa'][$key] / $validUsersCount) * ($key == 'mrr' ? 1 : 100);
+            
+            if ($key == 'mrr') {
+                // MRR biasanya tidak dipersentase, melainkan skala 0 - 1
+                $this->line(sprintf("%-20s | %-11s  | %-11s", $label, number_format($valStd, 4), number_format($valDfa, 4)));
+            } else {
+                $this->line(sprintf("%-20s | %-11s%% | %-11s%%", $label, number_format($valStd, 2), number_format($valDfa, 2)));
+            }
         }
         $this->info("======================================================");
         $this->line("Kesimpulan untuk Paper: Masukkan tabel perbandingan ini untuk");
         $this->line("membuktikan bahwa penambahan algoritma DFA (TF-IDF + DFA)");
         $this->line("menghasilkan performa rekomendasi yang lebih baik daripada");
-        $this->line("algoritma baseline (TF-IDF biasa).");
+        $this->line("algoritma baseline (TF-IDF biasa). Terutama pada metrik MRR.");
     }
 
     private function evaluateProfile($profile, $allVectors, $trainSet, $testSet, $k) 
@@ -162,10 +171,20 @@ class EvaluateRecommendation extends Command
         $recall = (count($testSet) > 0) ? ($hits / count($testSet)) : 0;
         $f1 = ($precision + $recall > 0) ? 2 * (($precision * $recall) / ($precision + $recall)) : 0;
 
+        // MRR (Mean Reciprocal Rank) Calculation
+        $mrr = 0;
+        foreach ($topK_Recommendations as $rank => $recId) {
+            if (in_array($recId, $testSet)) {
+                $mrr = 1.0 / ($rank + 1);
+                break; // Hanya ambil rank hit pertama
+            }
+        }
+
         return [
             'precision' => $precision,
             'recall' => $recall,
-            'f1' => $f1
+            'f1' => $f1,
+            'mrr' => $mrr
         ];
     }
 
