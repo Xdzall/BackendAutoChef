@@ -174,21 +174,21 @@ class RecipeController extends Controller
             return $w > 0.01;
         });
 
-        // --- NOVELTY ALGORITMA: Dominant Feature Amplification (DFA) ---
+        // --- NOVELTY ALGORITMA: Dominant Feature Amplification (DFA) & Noise Reduction ---
         // Penjelasan untuk paper: "We introduce Dominant Feature Amplification (DFA) 
-        // to the user profile vector. DFA identifies the top 3 most prominent ingredients 
-        // in the user's profile and amplifies them by a factor of 3.0, while decaying 
-        // secondary ingredients by a factor of 0.5. This ensures that the system strongly 
-        // prioritizes the user's core taste preferences."
+        // to the user profile vector. DFA identifies the top 2 most prominent ingredients 
+        // in the user's profile and amplifies them, while completely filtering out (zeroing) 
+        // secondary ingredients (noise reduction). This is especially effective in small 
+        // datasets to prevent ubiquitous ingredients (like salt, onion) from diluting the recommendation."
         arsort($userProfileVector); 
-        $topK = 3; 
+        $topK = 2; 
         
         $count = 0;
         foreach ($userProfileVector as $term => $weight) {
             if ($count < $topK) {
-                $userProfileVector[$term] = $weight * 3.0; // Amplifikasi bahan utama
+                $userProfileVector[$term] = $weight * 5.0; // Amplifikasi 2 bahan utama
             } else {
-                $userProfileVector[$term] = $weight * 0.5; // Penalti/Decay bahan sekunder
+                $userProfileVector[$term] = 0.0; // Hilangkan noise (bumbu pelengkap)
             }
             $count++;
         }
