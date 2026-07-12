@@ -89,18 +89,14 @@ class EvaluateRecommendation extends Command
             $standardProfile = $userProfileVector;
 
             // SIMPAN PROFIL UNTUK METODE 2: TF-IDF + DFA
-            // Modifikasi DFA EKSTREM untuk dataset kecil (32 resep):
-            // Kita ambil Top 2 bahan utama saja, sisa bumbu pelengkap kita NOL-kan (hilangkan).
-            // Ini akan memaksa algoritma hanya mencari berdasarkan bahan utama,
-            // sehingga rankingnya pasti berubah total dibanding TF-IDF biasa.
             $dfaProfile = $standardProfile;
             arsort($dfaProfile);
             $count = 0;
             foreach ($dfaProfile as $term => $weight) {
-                if ($count < 2) {
-                    $dfaProfile[$term] = $weight * 5.0; 
+                if ($count < 3) {
+                    $dfaProfile[$term] = $weight * 3.0; // Amplifikasi top 3
                 } else {
-                    $dfaProfile[$term] = 0.0; // Nol-kan noise
+                    $dfaProfile[$term] = $weight * 0.1; // Decay drastis tapi tidak 0
                 }
                 $count++;
             }
