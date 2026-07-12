@@ -3,51 +3,79 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 
 class NewPasswordController extends Controller
 {
     /**
-     * Handle an incoming new password request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Reset password menggunakan token dari verifikasi OTP.
      */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'token' => ['required'],
             'email' => ['required', 'email'],
+            'token' => ['required', 'string'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user) use ($request) {
-                $user->forceFill([
-                    'password' => Hash::make($request->string('password')),
-                    'remember_token' => Str::random(60),
-                ])->save();
+        // Cari record di password_reset_tokens
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
 
-                event(new PasswordReset($user));
-            }
-        );
-
-        if ($status != Password::PASSWORD_RESET) {
-            throw ValidationException::withMessages([
-                'email' => [__($status)],
-            ]);
+        if (!$record) {
+            return response()->json([
+                'message' => 'Token reset password tidak valid.',
+            ], 422);
         }
 
-        return response()->json(['status' => __($status)]);
+        // Cek apakah token sudah expired (15 menit dari saat OTP diverifikasi)
+        if (now()->diffInMinutes($record->created_at) > 15) {
+            DB::table('password_reset_tokens')
+                ->where('email', $request->email)
+                ->delete();
+
+            return response()->json([
+                'message' => 'Token sudah kedaluwarsa. Silakan ulangi proses reset password.',
+            ], 422);
+        }
+
+        // Verifikasi token
+        if (!Hash::check($request->token, $record->token)) {
+            return response()->json([
+                'message' => 'Token reset password tidak valid.',
+            ], 422);
+        }
+
+        // Cari user dan update password
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User tidak ditemukan.',
+            ], 404);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($request->string('password')),
+        ])->save();
+
+        // Hapus token dari database
+        DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->delete();
+
+        event(new PasswordReset($user));
+
+        return response()->json([
+            'message' => 'Password berhasil direset.',
+        ]);
     }
 }

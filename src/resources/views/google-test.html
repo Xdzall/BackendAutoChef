@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Google ID Token - AutoChef Test</title>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 700px;
+            width: 100%;
+        }
+        h2 { margin-bottom: 1rem; color: #e94560; }
+        p { margin-bottom: 1.5rem; opacity: 0.8; font-size: 0.95rem; }
+        #token-box {
+            display: none;
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+        #token-box label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #e94560;
+            font-weight: 600;
+        }
+        #token-box textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            background: #16213e;
+            color: #0f0;
+            border: 1px solid #e94560;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+        .btn-copy {
+            margin-top: 0.75rem;
+            padding: 10px 24px;
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .btn-copy:hover { background: #c73650; }
+        .info { margin-top: 1rem; font-size: 0.85rem; opacity: 0.6; }
+        #user-info {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #16213e;
+            border-radius: 8px;
+            text-align: left;
+        }
+        #user-info p { margin-bottom: 0.3rem; opacity: 1; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔑 Google ID Token Generator</h2>
+        <p>Klik tombol "Sign in with Google" di bawah untuk mendapatkan ID Token yang bisa digunakan di Postman.</p>
+
+        <!-- Google Sign-In Button -->
+        <div id="g_id_onload"
+            data-client_id="149279807205-kcbc6uuaq75ou7fhkqn91g0er936ritb.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse"
+            data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+            data-type="standard"
+            data-size="large"
+            data-theme="filled_blue"
+            data-text="sign_in_with"
+            data-shape="rectangular"
+            data-logo_alignment="left">
+        </div>
+
+        <div id="user-info">
+            <p><strong>✅ Login Berhasil!</strong></p>
+            <p id="user-name"></p>
+            <p id="user-email"></p>
+        </div>
+
+        <div id="token-box">
+            <label>Google ID Token (copy ini ke Postman):</label>
+            <textarea id="id-token" readonly></textarea>
+            <button class="btn-copy" onclick="copyToken()">📋 Copy Token</button>
+            <p class="info">Token ini berlaku sekitar 1 jam. Paste di Postman sebagai value dari field "id_token".</p>
+        </div>
+    </div>
+
+    <script>
+        function handleCredentialResponse(response) {
+            const idToken = response.credential;
+
+            // Decode JWT payload (bagian tengah)
+            const payload = JSON.parse(atob(idToken.split('.')[1]));
+
+            // Tampilkan info user
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('user-name').textContent = '👤 Nama: ' + payload.name;
+            document.getElementById('user-email').textContent = '📧 Email: ' + payload.email;
+
+            // Tampilkan token
+            document.getElementById('token-box').style.display = 'block';
+            document.getElementById('id-token').value = idToken;
+        }
+
+        function copyToken() {
+            const textarea = document.getElementById('id-token');
+            textarea.select();
+            document.execCommand('copy');
+
+            const btn = document.querySelector('.btn-copy');
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => { btn.textContent = '📋 Copy Token'; }, 2000);
+        }
+    </script>
+</body>
+</html>
