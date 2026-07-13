@@ -125,7 +125,7 @@ class EvaluateRecommendation extends Command
                 arsort($dfaProfile);
                 $count = 0;
                 foreach ($dfaProfile as $term => $weight) {
-                    if ($count < 3) {
+                    if ($count < 7) {
                         $dfaProfile[$term] = $weight * 3.0;
                     } else {
                         $dfaProfile[$term] = $weight * 0.1;

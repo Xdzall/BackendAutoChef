@@ -159,7 +159,9 @@ class EvaluateAblation extends Command
             $components = [];
             if ($config['idf_reweight']) $components[] = 'IDF';
             if ($config['noise_filter']) $components[] = 'NF';
-            if ($config['dfa']) $components[] = 'DFA';
+            if ($config['dfa']) {
+                $components[] = 'DFA';
+            }
 
             $row = sprintf("%-22s", $label);
 
@@ -190,7 +192,7 @@ class EvaluateAblation extends Command
         $this->line("   M1 Baseline     : Raw mean user profile (no enhancements)");
         $this->line("   M2 IDF Reweight : + IDF re-weighting on user profile");
         $this->line("   M3 Noise Filter : + Remove terms with weight < 0.01");
-        $this->line("   M4 Full DFA     : + Dominant Feature Amplification (K=3, α=3.0, β=0.1)");
+        $this->line("   M4 Full DFA     : + Dominant Feature Amplification (K=7, α=3.0, β=0.1)");
         $this->line("");
         $this->info("✅ Gunakan tabel ini sebagai TABLE ablation study di paper iSemantic 2026.");
     }
@@ -250,7 +252,7 @@ class EvaluateAblation extends Command
             arsort($profile);
             $count = 0;
             foreach ($profile as $term => $weight) {
-                if ($count < 3) {
+                if ($count < 7) {
                     $profile[$term] = $weight * 3.0;
                 } else {
                     $profile[$term] = $weight * 0.1;
